@@ -30,6 +30,7 @@ export function setup(ctx: SpindleFrontendContext) {
   let removeHideStyle: (() => void) | null = null
   let cancelPicking: (() => void) | null = null
   let mountedRowHandles: MountedHandle[] = []
+  let searchQuery = ''
 
   const removeBaseStyle = ctx.dom.addStyle(`
     .tit-desc {
@@ -43,7 +44,23 @@ export function setup(ctx: SpindleFrontendContext) {
       align-items: center;
       justify-content: space-between;
       gap: 8px;
+      margin-bottom: 8px;
+    }
+    .tit-sub-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       margin-bottom: 12px;
+    }
+    .tit-search-input {
+      flex: 1;
+      padding: 6px 10px;
+      border-radius: var(--lumiverse-radius);
+      border: 1px solid var(--lumiverse-border);
+      background: var(--lumiverse-fill);
+      color: var(--lumiverse-text);
+      font-size: 12.5px;
     }
     .tit-add-btn {
       display: inline-flex;
@@ -78,9 +95,9 @@ export function setup(ctx: SpindleFrontendContext) {
       background: none;
       border: none;
       color: var(--lumiverse-text-dim);
-      font-size: 12px;
+      font-size: 11px;
       cursor: pointer;
-      padding: 4px;
+      padding: 3px 5px;
       border-radius: 4px;
       display: inline-flex;
       align-items: center;
@@ -93,11 +110,11 @@ export function setup(ctx: SpindleFrontendContext) {
     .tit-row {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
+      gap: 6px;
+      padding: 6px 8px;
       border: 1px solid var(--lumiverse-border);
       border-radius: var(--lumiverse-radius);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       background: var(--lumiverse-fill-subtle);
     }
     .tit-row-label {
@@ -108,6 +125,10 @@ export function setup(ctx: SpindleFrontendContext) {
       white-space: nowrap;
       color: var(--lumiverse-text);
       font-size: 13px;
+    }
+    .tit-reorder-group {
+      display: flex;
+      gap: 2px;
     }
     .tit-empty {
       color: var(--lumiverse-text-dim);
@@ -171,24 +192,67 @@ export function setup(ctx: SpindleFrontendContext) {
 
   const toggleAllBox = ctx.dom.createElement('div')
   toggleAllBox.className = 'tit-toggle-all-box'
-  
   const toggleAllLabel = ctx.dom.createElement('span')
   toggleAllLabel.textContent = 'Toggle all'
   toggleAllBox.appendChild(toggleAllLabel)
-
   const toggleAllSlot = ctx.dom.createElement('div')
   toggleAllBox.appendChild(toggleAllSlot)
   controlsHeader.appendChild(toggleAllBox)
 
+  // Sub-controls: Search & Clear All
+  const subControls = ctx.dom.createElement('div')
+  subControls.className = 'tit-sub-controls'
+
+  const searchInput = ctx.dom.createElement('input') as HTMLInputElement
+  searchInput.type = 'text'
+  searchInput.className = 'tit-search-input'
+  searchInput.placeholder = 'Search toggles...'
+  searchInput.addEventListener('input', (e) => {
+    searchQuery = (e.target as HTMLInputElement).value.toLowerCase()
+    renderList()
+  })
+  subControls.appendChild(searchInput)
+
+  const clearAllBtn = ctx.dom.createElement('button') as HTMLButtonElement
+  clearAllBtn.type = 'button'
+  clearAllBtn.className = 'tit-text-btn'
+  clearAllBtn.textContent = 'Clear all'
+  clearAllBtn.style.fontSize = '12px'
+  clearAllBtn.addEventListener('click', async () => {
+    const { confirmed } = await ctx.ui.showConfirm({
+      title: 'Clear all icons?',
+      message: 'Remove all managed icons? All buttons will return to visible.',
+      variant: 'warning',
+      confirmLabel: 'Clear All',
+    })
+    if (!confirmed) return
+    icons = []
+    persist()
+    applyHideStyles()
+    renderList()
+  })
+  subControls.appendChild(clearAllBtn)
+
+  tab.root.appendChild(subControls)
+
   const list = ctx.dom.createElement('div')
   tab.root.appendChild(list)
+
+  function moveIcon(index: number, direction: -1 | 1) {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= icons.length) return
+    const temp = icons[index]
+    icons[index] = icons[targetIndex]
+    icons[targetIndex] = temp
+    persist()
+    renderList()
+  }
 
   function renderList() {
     for (const handle of mountedRowHandles) handle.destroy()
     mountedRowHandles = []
     list.replaceChildren()
 
-    // Update Toggle All switch state
     toggleAllSlot.replaceChildren()
     if (icons.length > 0) {
       const allVisible = icons.every((i) => !i.hidden)
@@ -206,21 +270,53 @@ export function setup(ctx: SpindleFrontendContext) {
         })
       )
       toggleAllBox.style.display = 'flex'
+      subControls.style.display = 'flex'
     } else {
       toggleAllBox.style.display = 'none'
+      subControls.style.display = 'none'
     }
 
-    if (icons.length === 0) {
+    const filteredIcons = icons.filter((i) => i.label.toLowerCase().includes(searchQuery))
+
+    if (filteredIcons.length === 0) {
       const empty = ctx.dom.createElement('div')
       empty.className = 'tit-empty'
-      empty.textContent = 'No icons managed yet.'
+      empty.textContent = icons.length === 0 ? 'No icons managed yet.' : 'No matching icons found.'
       list.appendChild(empty)
       return
     }
 
-    for (const icon of icons) {
+    filteredIcons.forEach((icon) => {
+      const realIndex = icons.findIndex((i) => i.id === icon.id)
+
       const row = ctx.dom.createElement('div')
       row.className = 'tit-row'
+
+      // Reorder buttons (⬆️ / ⬇️)
+      const reorderGroup = ctx.dom.createElement('div')
+      reorderGroup.className = 'tit-reorder-group'
+
+      if (realIndex > 0) {
+        const upBtn = ctx.dom.createElement('button') as HTMLButtonElement
+        upBtn.type = 'button'
+        upBtn.className = 'tit-icon-btn'
+        upBtn.textContent = '▲'
+        upBtn.title = 'Move up'
+        upBtn.addEventListener('click', () => moveIcon(realIndex, -1))
+        reorderGroup.appendChild(upBtn)
+      }
+
+      if (realIndex < icons.length - 1) {
+        const downBtn = ctx.dom.createElement('button') as HTMLButtonElement
+        downBtn.type = 'button'
+        downBtn.className = 'tit-icon-btn'
+        downBtn.textContent = '▼'
+        downBtn.title = 'Move down'
+        downBtn.addEventListener('click', () => moveIcon(realIndex, 1))
+        reorderGroup.appendChild(downBtn)
+      }
+
+      row.appendChild(reorderGroup)
 
       const label = ctx.dom.createElement('div')
       label.className = 'tit-row-label'
@@ -232,7 +328,7 @@ export function setup(ctx: SpindleFrontendContext) {
       editBtn.type = 'button'
       editBtn.className = 'tit-icon-btn'
       editBtn.title = 'Rename icon'
-      editBtn.innerHTML = '✏️'
+      editBtn.textContent = '✏️'
       editBtn.addEventListener('click', () => openRenameModal(icon))
       row.appendChild(editBtn)
 
@@ -276,7 +372,7 @@ export function setup(ctx: SpindleFrontendContext) {
           },
         })
       )
-    }
+    })
   }
 
   function applyHideStyles() {
