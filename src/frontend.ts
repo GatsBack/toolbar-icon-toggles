@@ -98,7 +98,7 @@ export function setup(ctx: SpindleFrontendContext) {
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background: var(--color-primary, var(--primary-color, var(--lumiverse-accent-color, var(--accent-color, var(--lumiverse-accent, var(--accent, #a855f7))))));
+      background: var(--tit-theme-accent, #a855f7);
       color: #ffffff;
       border: 1px solid rgba(255, 255, 255, 0.25);
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
@@ -162,7 +162,7 @@ export function setup(ctx: SpindleFrontendContext) {
     .tit-row[draggable="true"] { cursor: grab; }
     .tit-row.tit-dragging { opacity: 0.4; cursor: grabbing; }
     .tit-row.tit-drag-over {
-      border-color: var(--color-primary, var(--primary-color, #a855f7));
+      border-color: var(--tit-theme-accent, #a855f7);
       background: var(--lumiverse-fill-hover, rgba(128,128,128,0.1));
     }
     .tit-drag-handle {
@@ -193,7 +193,7 @@ export function setup(ctx: SpindleFrontendContext) {
       transform: translateX(-50%);
       z-index: 999999;
       background: var(--lumiverse-fill, #ffffff);
-      border: 1px solid var(--color-primary, var(--primary-color, #a855f7));
+      border: 1px solid var(--tit-theme-accent, #a855f7);
       color: var(--lumiverse-text, inherit);
       padding: 10px 16px;
       border-radius: var(--lumiverse-radius, 6px);
@@ -203,7 +203,7 @@ export function setup(ctx: SpindleFrontendContext) {
       user-select: none;
     }
     .tit-pick-hover {
-      outline: 2px solid var(--color-primary, var(--primary-color, #a855f7)) !important;
+      outline: 2px solid var(--tit-theme-accent, #a855f7) !important;
       outline-offset: 2px !important;
     }
     .tit-modal-actions {
@@ -214,6 +214,36 @@ export function setup(ctx: SpindleFrontendContext) {
     }
   `)
 
+  // Dynamic color detection logic
+  function updateDynamicAccentColor() {
+    const activeEl = document.querySelector('.active, [aria-selected="true"], .selected, button.primary')
+    let color = ''
+
+    if (activeEl) {
+      const computed = window.getComputedStyle(activeEl)
+      color = computed.backgroundColor !== 'rgba(0, 0, 0, 0)' && computed.backgroundColor !== 'transparent'
+        ? computed.backgroundColor
+        : computed.color
+    }
+
+    if (!color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)') {
+      const rootStyles = window.getComputedStyle(document.documentElement)
+      color = rootStyles.getPropertyValue('--SmartThemeBodyColor').trim() ||
+              rootStyles.getPropertyValue('--color-primary').trim() ||
+              rootStyles.getPropertyValue('--primary-color').trim() ||
+              rootStyles.getPropertyValue('--accent-color').trim() ||
+              '#a855f7'
+    }
+
+    document.documentElement.style.setProperty('--tit-theme-accent', color)
+  }
+
+  // Update theme accent immediately & observe changes
+  updateDynamicAccentColor()
+  const themeObserver = new MutationObserver(() => updateDynamicAccentColor())
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] })
+  themeObserver.observe(document.body, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] })
+
   // Inject Floating Action Button (FAB)
   const fab = ctx.dom.createElement('button') as HTMLButtonElement
   fab.type = 'button'
@@ -222,7 +252,6 @@ export function setup(ctx: SpindleFrontendContext) {
   fab.title = 'Drag to move • Tap to pick icon'
   fab.setAttribute(OWNED_ATTR, '1')
 
-  // Load position from storage or fallback to bottom-right default
   const savedPos = localStorage.getItem(FAB_POS_KEY)
   if (savedPos) {
     try {
@@ -241,7 +270,6 @@ export function setup(ctx: SpindleFrontendContext) {
   fab.style.display = isFabVisible ? 'flex' : 'none'
   document.body.appendChild(fab)
 
-  // Dragging logic for the FAB (Mouse & Touch)
   let isDraggingFab = false
   let fabMoved = false
   let fabStartX = 0
@@ -318,7 +346,6 @@ export function setup(ctx: SpindleFrontendContext) {
     'Click "Add icon" or tap the floating "+" button, then select the target icon.'
   tab.root.appendChild(desc)
 
-  // Floating button toggle setting row
   const fabSettingRow = ctx.dom.createElement('div')
   fabSettingRow.className = 'tit-setting-row'
   const fabSettingLabel = ctx.dom.createElement('span')
@@ -815,6 +842,7 @@ export function setup(ctx: SpindleFrontendContext) {
   const unsubAction = quickAction.onClick(() => tab.activate())
 
   return () => {
+    themeObserver.disconnect()
     cancelPicking?.()
     unsubBackend()
     unsubAction()
