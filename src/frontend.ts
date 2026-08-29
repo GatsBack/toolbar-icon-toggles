@@ -98,21 +98,22 @@ export function setup(ctx: SpindleFrontendContext) {
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background: var(--accent-color, var(--lumiverse-accent-color, var(--accent, var(--lumiverse-accent, currentColor))));
-      color: var(--accent-contrast, var(--lumiverse-accent-contrast, #ffffff));
-      border: 1px solid var(--lumiverse-border, rgba(255, 255, 255, 0.2));
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      background: var(--color-primary, var(--primary-color, var(--lumiverse-accent-color, var(--accent-color, var(--lumiverse-accent, var(--accent, #a855f7))))));
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
       font-size: 20px;
+      font-weight: bold;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: grab;
       user-select: none;
       touch-action: none;
-      transition: background 0.2s ease, color 0.2s ease, border-color 0.15s ease, transform 0.1s ease;
+      transition: background 0.2s ease, transform 0.1s ease;
     }
     .tit-fab-btn:hover {
-      filter: brightness(1.08);
+      filter: brightness(1.1);
     }
     .tit-fab-btn:active { cursor: grabbing; transform: scale(0.95); }
     .tit-toggle-all-box {
@@ -161,7 +162,7 @@ export function setup(ctx: SpindleFrontendContext) {
     .tit-row[draggable="true"] { cursor: grab; }
     .tit-row.tit-dragging { opacity: 0.4; cursor: grabbing; }
     .tit-row.tit-drag-over {
-      border-color: var(--accent-color, var(--lumiverse-accent, #a855f7));
+      border-color: var(--color-primary, var(--primary-color, #a855f7));
       background: var(--lumiverse-fill-hover, rgba(128,128,128,0.1));
     }
     .tit-drag-handle {
@@ -192,7 +193,7 @@ export function setup(ctx: SpindleFrontendContext) {
       transform: translateX(-50%);
       z-index: 999999;
       background: var(--lumiverse-fill, #ffffff);
-      border: 1px solid var(--accent-color, var(--lumiverse-accent, #a855f7));
+      border: 1px solid var(--color-primary, var(--primary-color, #a855f7));
       color: var(--lumiverse-text, inherit);
       padding: 10px 16px;
       border-radius: var(--lumiverse-radius, 6px);
@@ -202,7 +203,7 @@ export function setup(ctx: SpindleFrontendContext) {
       user-select: none;
     }
     .tit-pick-hover {
-      outline: 2px solid var(--accent-color, var(--lumiverse-accent, #a855f7)) !important;
+      outline: 2px solid var(--color-primary, var(--primary-color, #a855f7)) !important;
       outline-offset: 2px !important;
     }
     .tit-modal-actions {
