@@ -98,26 +98,28 @@ export function setup(ctx: SpindleFrontendContext) {
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background: var(--lumiverse-accent);
-      color: var(--lumiverse-accent-text, #ffffff);
-      border: 1px solid var(--lumiverse-border-subtle, transparent);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-      font-size: 20px;
+      background: var(--lumiverse-accent, var(--lumiverse-fill-subtle, #252529));
+      color: var(--lumiverse-accent-text, var(--lumiverse-text, #ffffff));
+      border: 1px solid var(--lumiverse-border, rgba(255, 255, 255, 0.15));
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      font-size: 22px;
+      line-height: 1;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: grab;
       user-select: none;
       touch-action: none;
-      transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
     }
     .tit-fab-btn:hover {
-      background: var(--lumiverse-accent-hover, var(--lumiverse-accent));
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      background: var(--lumiverse-accent-hover, var(--lumiverse-fill-hover, #323238));
+      border-color: var(--lumiverse-border-hover, rgba(255, 255, 255, 0.25));
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
     }
     .tit-fab-btn:active {
       cursor: grabbing;
-      background: var(--lumiverse-accent-active, var(--lumiverse-accent));
+      background: var(--lumiverse-accent-active, var(--lumiverse-fill, #1a1a1c));
       transform: scale(0.94);
     }
     .tit-toggle-all-box {
