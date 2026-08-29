@@ -1,0 +1,13 @@
+{
+  "name": "toolbar-icon-toggles",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Spindle extension for Lumiverse: pick any icon button and toggle whether it's shown.",
+  "scripts": {
+    "build": "bun build src/backend.ts --outfile dist/backend.js --target bun && bun build src/frontend.ts --outfile dist/frontend.js --target browser"
+  },
+  "devDependencies": {
+    "lumiverse-spindle-types": "*"
+  }
+}

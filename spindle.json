@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "name": "Toolbar Icon Toggles",
+  "identifier": "toolbar_icon_toggles",
+  "author": "GatsBack",
+  "github": "https://github.com/GatsBack/toolbar-icon-toggles",
+  "homepage": "https://github.com/GatsBack/toolbar-icon-toggles",
+  "description": "Pick any icon button in Lumiverse and toggle whether it's shown or hidden.",
+  "permissions": [],
+  "entry_backend": "dist/backend.js",
+  "entry_frontend": "dist/frontend.js"
+}
