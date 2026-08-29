@@ -37,6 +37,90 @@ export function setup(ctx: SpindleFrontendContext) {
   let draggedIndex: number | null = null
   let isFabVisible = localStorage.getItem(FAB_VISIBLE_KEY) !== 'false'
 
+  // ---------- Improved dynamic accent color detection ----------
+  function updateDynamicAccentColor() {
+    let color = ''
+
+    // 1. Try to find the currently active/interactive element
+    const activeSelectors = [
+      '.active',
+      '[aria-selected="true"]',
+      '.selected',
+      'button.primary',
+      '[data-active="true"]',
+      '.lumiverse-active',
+      '.tab-active',
+      '.nav-item.active'
+    ]
+
+    let activeEl: Element | null = null
+    for (const sel of activeSelectors) {
+      const el = document.querySelector(sel)
+      if (el) {
+        activeEl = el
+        break
+      }
+    }
+
+    if (activeEl) {
+      const computed = window.getComputedStyle(activeEl)
+      // Prefer background-color, fallback to color
+      const bg = computed.backgroundColor
+      if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+        color = bg
+      } else {
+        color = computed.color
+      }
+    }
+
+    // 2. If still no color, try reading Lumiverse's own accent variable
+    if (!color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)') {
+      const rootStyles = window.getComputedStyle(document.documentElement)
+      color = rootStyles.getPropertyValue('--lumiverse-primary').trim() ||
+              rootStyles.getPropertyValue('--lumiverse-accent').trim() ||
+              rootStyles.getPropertyValue('--color-primary').trim() ||
+              rootStyles.getPropertyValue('--primary-color').trim() ||
+              rootStyles.getPropertyValue('--accent-color').trim() ||
+              rootStyles.getPropertyValue('--SmartThemeBodyColor').trim()
+    }
+
+    // 3. Ultimate fallback
+    if (!color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)') {
+      color = '#a855f7' // default purple
+    }
+
+    document.documentElement.style.setProperty('--tit-theme-accent', color)
+  }
+
+  // Force an update right away
+  updateDynamicAccentColor()
+
+  // ---------- Broad observer with debounce ----------
+  let accentDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+  const themeObserver = new MutationObserver(() => {
+    if (accentDebounceTimer) clearTimeout(accentDebounceTimer)
+    accentDebounceTimer = setTimeout(() => {
+      updateDynamicAccentColor()
+      accentDebounceTimer = null
+    }, 200)
+  })
+
+  // Watch the entire body for structural changes and attribute updates
+  themeObserver.observe(document.body, {
+    attributes: true,
+    childList: true,
+    subtree: true,
+    attributeFilter: ['class', 'style', 'data-theme', 'data-state', 'aria-selected']
+  })
+
+  // Also re-check on window focus/resize (system theme changes)
+  const onWindowFocus = () => updateDynamicAccentColor()
+  const onWindowResize = () => updateDynamicAccentColor()
+  window.addEventListener('focus', onWindowFocus)
+  window.addEventListener('resize', onWindowResize)
+
+  // ---------- Base styles (unchanged) ----------
   const removeBaseStyle = ctx.dom.addStyle(`
     .tit-desc {
       color: var(--lumiverse-text-muted, currentColor);
@@ -214,37 +298,7 @@ export function setup(ctx: SpindleFrontendContext) {
     }
   `)
 
-  // Dynamic color detection logic
-  function updateDynamicAccentColor() {
-    const activeEl = document.querySelector('.active, [aria-selected="true"], .selected, button.primary')
-    let color = ''
-
-    if (activeEl) {
-      const computed = window.getComputedStyle(activeEl)
-      color = computed.backgroundColor !== 'rgba(0, 0, 0, 0)' && computed.backgroundColor !== 'transparent'
-        ? computed.backgroundColor
-        : computed.color
-    }
-
-    if (!color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)') {
-      const rootStyles = window.getComputedStyle(document.documentElement)
-      color = rootStyles.getPropertyValue('--SmartThemeBodyColor').trim() ||
-              rootStyles.getPropertyValue('--color-primary').trim() ||
-              rootStyles.getPropertyValue('--primary-color').trim() ||
-              rootStyles.getPropertyValue('--accent-color').trim() ||
-              '#a855f7'
-    }
-
-    document.documentElement.style.setProperty('--tit-theme-accent', color)
-  }
-
-  // Update theme accent immediately & observe changes
-  updateDynamicAccentColor()
-  const themeObserver = new MutationObserver(() => updateDynamicAccentColor())
-  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] })
-  themeObserver.observe(document.body, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] })
-
-  // Inject Floating Action Button (FAB)
+  // ---------- Floating Action Button (FAB) ----------
   const fab = ctx.dom.createElement('button') as HTMLButtonElement
   fab.type = 'button'
   fab.className = 'tit-fab-btn'
@@ -328,6 +382,7 @@ export function setup(ctx: SpindleFrontendContext) {
   fab.addEventListener('pointermove', onFabPointerMove)
   fab.addEventListener('pointerup', onFabPointerUp)
 
+  // ---------- Drawer tab ----------
   const tab = ctx.ui.registerDrawerTab({
     id: 'icon-toggles',
     title: 'Toolbar Icon Toggles',
@@ -423,7 +478,11 @@ export function setup(ctx: SpindleFrontendContext) {
   const list = ctx.dom.createElement('div')
   tab.root.appendChild(list)
 
+  // ---------- Rendering and logic functions ----------
   function renderList() {
+    // Force accent update when the list is rendered (user interaction)
+    updateDynamicAccentColor()
+
     for (const handle of mountedRowHandles) handle.destroy()
     mountedRowHandles = []
     list.replaceChildren()
@@ -688,6 +747,8 @@ export function setup(ctx: SpindleFrontendContext) {
         openNamingModal(el)
       } else {
         tab.activate()
+        // Force accent update after the drawer opens
+        setTimeout(() => updateDynamicAccentColor(), 300)
       }
     }
 
@@ -737,6 +798,7 @@ export function setup(ctx: SpindleFrontendContext) {
       e.preventDefault()
       modal.dismiss()
       tab.activate()
+      setTimeout(() => updateDynamicAccentColor(), 300)
     })
     actions.appendChild(cancelBtn)
 
@@ -753,6 +815,7 @@ export function setup(ctx: SpindleFrontendContext) {
       renderList()
       modal.dismiss()
       tab.activate()
+      setTimeout(() => updateDynamicAccentColor(), 300)
     })
 
     inputEl.addEventListener('keydown', (e) => {
@@ -839,10 +902,17 @@ export function setup(ctx: SpindleFrontendContext) {
     label: 'Toolbar Icon Toggles',
     iconSvg: ACTION_ICON_SVG,
   })
-  const unsubAction = quickAction.onClick(() => tab.activate())
+  const unsubAction = quickAction.onClick(() => {
+    tab.activate()
+    setTimeout(() => updateDynamicAccentColor(), 300)
+  })
 
+  // ---------- Cleanup ----------
   return () => {
     themeObserver.disconnect()
+    if (accentDebounceTimer) clearTimeout(accentDebounceTimer)
+    window.removeEventListener('focus', onWindowFocus)
+    window.removeEventListener('resize', onWindowResize)
     cancelPicking?.()
     unsubBackend()
     unsubAction()
