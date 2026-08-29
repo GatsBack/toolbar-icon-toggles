@@ -98,9 +98,10 @@ export function setup(ctx: SpindleFrontendContext) {
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background-color: var(--lumiverse-fill-elevated, var(--lumiverse-bg-primary, var(--lumiverse-fill, #1e1e22))) !important;
-      color: var(--lumiverse-text, #ffffff) !important;
-      border: 1px solid var(--lumiverse-border, #333338);
+      background-image: none !important;
+      background-color: var(--lumiverse-accent, var(--lumiverse-fill-elevated, #007acc)) !important;
+      color: var(--lumiverse-accent-text, var(--lumiverse-text, #ffffff)) !important;
+      border: 1px solid var(--lumiverse-border, rgba(255, 255, 255, 0.2));
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
       font-size: 22px;
       line-height: 1;
@@ -114,13 +115,15 @@ export function setup(ctx: SpindleFrontendContext) {
       transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
     }
     .tit-fab-btn:hover {
-      background-color: var(--lumiverse-fill-hover, var(--lumiverse-bg-secondary, #2a2a30)) !important;
-      border-color: var(--lumiverse-border-hover, #44444a);
+      background-image: none !important;
+      background-color: var(--lumiverse-accent-hover, var(--lumiverse-fill-hover, #005999)) !important;
+      border-color: var(--lumiverse-border-hover, rgba(255, 255, 255, 0.35));
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
     }
     .tit-fab-btn:active {
       cursor: grabbing;
-      background-color: var(--lumiverse-fill-active, #151518) !important;
+      background-image: none !important;
+      background-color: var(--lumiverse-accent-active, var(--lumiverse-fill-active, #004070)) !important;
       transform: scale(0.94);
     }
     .tit-toggle-all-box {
@@ -365,7 +368,7 @@ export function setup(ctx: SpindleFrontendContext) {
   toggleAllBox.appendChild(toggleAllLabel)
   const toggleAllSlot = ctx.dom.createElement('div')
   toggleAllBox.appendChild(toggleAllSlot)
-  controlsHeader.appendChild(toggleAllBox)
+  controlsHeader.appendChild(toggleAllSlot)
 
   const subControls = ctx.dom.createElement('div')
   subControls.className = 'tit-sub-controls'
