@@ -172,7 +172,14 @@ export function setup(ctx: SpindleFrontendContext) {
       row.appendChild(label)
 
       const switchSlot = ctx.dom.createElement('div')
+      const closeSlot = ctx.dom.createElement('div')
+
+      // 1. MUST append row and slots to the DOM FIRST so Spindle recognizes the extension ownership
       row.appendChild(switchSlot)
+      row.appendChild(closeSlot)
+      list.appendChild(row)
+
+      // 2. NOW mount components into the slots after they are in the DOM tree
       mountedRowHandles.push(
         ctx.components.mountSwitch(switchSlot, {
           checked: !icon.hidden,
@@ -186,8 +193,6 @@ export function setup(ctx: SpindleFrontendContext) {
         })
       )
 
-      const closeSlot = ctx.dom.createElement('div')
-      row.appendChild(closeSlot)
       mountedRowHandles.push(
         ctx.components.mountCloseButton(closeSlot, {
           size: 'sm',
@@ -207,8 +212,6 @@ export function setup(ctx: SpindleFrontendContext) {
           },
         })
       )
-
-      list.appendChild(row)
     }
   }
 
