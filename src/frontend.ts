@@ -12,6 +12,8 @@ interface MountedHandle {
 }
 
 const OWNED_ATTR = 'data-tit-owned'
+const FAB_POS_KEY = 'tit_fab_position'
+const FAB_VISIBLE_KEY = 'tit_fab_visible'
 
 const TAB_ICON_SVG =
   '<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -30,8 +32,10 @@ export function setup(ctx: SpindleFrontendContext) {
   let removeHideStyle: (() => void) | null = null
   let cancelPicking: (() => void) | null = null
   let mountedRowHandles: MountedHandle[] = []
+  let mountedFabSwitchHandle: MountedHandle | null = null
   let searchQuery = ''
   let draggedIndex: number | null = null
+  let isFabVisible = localStorage.getItem(FAB_VISIBLE_KEY) !== 'false'
 
   const removeBaseStyle = ctx.dom.addStyle(`
     .tit-desc {
@@ -46,6 +50,18 @@ export function setup(ctx: SpindleFrontendContext) {
       justify-content: space-between;
       gap: 8px;
       margin-bottom: 8px;
+    }
+    .tit-setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      border-radius: var(--lumiverse-radius);
+      border: 1px solid var(--lumiverse-border);
+      background: var(--lumiverse-fill-subtle);
+      font-size: 12.5px;
+      color: var(--lumiverse-text);
     }
     .tit-sub-controls {
       display: flex;
@@ -78,8 +94,6 @@ export function setup(ctx: SpindleFrontendContext) {
     .tit-add-btn:hover { border-color: var(--lumiverse-border-hover); }
     .tit-fab-btn {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
       z-index: 99999;
       width: 44px;
       height: 44px;
@@ -92,13 +106,11 @@ export function setup(ctx: SpindleFrontendContext) {
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
+      cursor: grab;
       user-select: none;
-      transition: transform 0.15s ease, background 0.15s ease;
+      touch-action: none;
     }
-    .tit-fab-btn:active {
-      transform: scale(0.92);
-    }
+    .tit-fab-btn:active { cursor: grabbing; }
     .tit-toggle-all-box {
       display: flex;
       align-items: center;
@@ -202,13 +214,88 @@ export function setup(ctx: SpindleFrontendContext) {
   fab.type = 'button'
   fab.className = 'tit-fab-btn'
   fab.textContent = '+'
-  fab.title = 'Pick icon to toggle'
+  fab.title = 'Drag to move • Tap to pick icon'
   fab.setAttribute(OWNED_ATTR, '1')
-  fab.addEventListener('click', (e) => {
-    e.preventDefault()
-    startPicking()
-  })
+
+  // Load position from storage or fallback to bottom-right default
+  const savedPos = localStorage.getItem(FAB_POS_KEY)
+  if (savedPos) {
+    try {
+      const { x, y } = JSON.parse(savedPos)
+      fab.style.left = `${x}px`
+      fab.style.top = `${y}px`
+    } catch {
+      fab.style.bottom = '20px'
+      fab.style.right = '20px'
+    }
+  } else {
+    fab.style.bottom = '20px'
+    fab.style.right = '20px'
+  }
+
+  fab.style.display = isFabVisible ? 'flex' : 'none'
   document.body.appendChild(fab)
+
+  // Dragging logic for the FAB (Mouse & Touch)
+  let isDraggingFab = false
+  let fabMoved = false
+  let fabStartX = 0
+  let fabStartY = 0
+  let fabInitialLeft = 0
+  let fabInitialTop = 0
+
+  const onFabPointerDown = (e: PointerEvent) => {
+    isDraggingFab = true
+    fabMoved = false
+    fabStartX = e.clientX
+    fabStartY = e.clientY
+
+    const rect = fab.getBoundingClientRect()
+    fabInitialLeft = rect.left
+    fabInitialTop = rect.top
+
+    // Switch from bottom/right layout to fixed left/top for free dragging
+    fab.style.bottom = 'auto'
+    fab.style.right = 'auto'
+    fab.style.left = `${fabInitialLeft}px`
+    fab.style.top = `${fabInitialTop}px`
+
+    fab.setPointerCapture(e.pointerId)
+  }
+
+  const onFabPointerMove = (e: PointerEvent) => {
+    if (!isDraggingFab) return
+    const dx = e.clientX - fabStartX
+    const dy = e.clientY - fabStartY
+
+    if (Math.hypot(dx, dy) > 4) {
+      fabMoved = true
+    }
+
+    const newLeft = Math.max(0, Math.min(window.innerWidth - 44, fabInitialLeft + dx))
+    const newTop = Math.max(0, Math.min(window.innerHeight - 44, fabInitialTop + dy))
+
+    fab.style.left = `${newLeft}px`
+    fab.style.top = `${newTop}px`
+  }
+
+  const onFabPointerUp = (e: PointerEvent) => {
+    if (!isDraggingFab) return
+    isDraggingFab = false
+    fab.releasePointerCapture(e.pointerId)
+
+    if (fabMoved) {
+      const rect = fab.getBoundingClientRect()
+      localStorage.setItem(FAB_POS_KEY, JSON.stringify({ x: rect.left, y: rect.top }))
+    } else {
+      // It was a tap/click, trigger picking
+      startPicking()
+    }
+  }
+
+  fab.addEventListener('pointerdown', onFabPointerDown)
+  fab.addEventListener('pointermove', onFabPointerMove)
+  fab.addEventListener('pointerup', onFabPointerUp)
 
   const tab = ctx.ui.registerDrawerTab({
     id: 'icon-toggles',
@@ -227,6 +314,27 @@ export function setup(ctx: SpindleFrontendContext) {
     'Pick any icon button in the app and toggle whether it\u2019s shown. ' +
     'Click "Add icon" or tap the floating "+" button, then select the target icon.'
   tab.root.appendChild(desc)
+
+  // Floating button toggle setting row
+  const fabSettingRow = ctx.dom.createElement('div')
+  fabSettingRow.className = 'tit-setting-row'
+  const fabSettingLabel = ctx.dom.createElement('span')
+  fabSettingLabel.textContent = 'Show floating "+" button'
+  fabSettingRow.appendChild(fabSettingLabel)
+  const fabSwitchSlot = ctx.dom.createElement('div')
+  fabSettingRow.appendChild(fabSwitchSlot)
+  tab.root.appendChild(fabSettingRow)
+
+  mountedFabSwitchHandle = ctx.components.mountSwitch(fabSwitchSlot, {
+    checked: isFabVisible,
+    size: 'sm',
+    ariaLabel: 'Show floating add icon button',
+    onChange: (visible: boolean) => {
+      isFabVisible = visible
+      localStorage.setItem(FAB_VISIBLE_KEY, String(visible))
+      fab.style.display = isFabVisible ? 'flex' : 'none'
+    },
+  })
 
   const controlsHeader = ctx.dom.createElement('div')
   controlsHeader.className = 'tit-controls-header'
@@ -487,7 +595,6 @@ export function setup(ctx: SpindleFrontendContext) {
   function startPicking() {
     if (cancelPicking) return
 
-    // Safely defer closing the drawer so the click event completes
     setTimeout(() => {
       ctx.ui.closeDrawer()
     }, 50)
@@ -544,7 +651,7 @@ export function setup(ctx: SpindleFrontendContext) {
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('keydown', onKey, true)
       ctx.dom.uninject(banner)
-      fab.style.display = 'flex'
+      fab.style.display = isFabVisible ? 'flex' : 'none'
       cancelPicking = null
 
       if (el) {
@@ -709,6 +816,10 @@ export function setup(ctx: SpindleFrontendContext) {
     unsubBackend()
     unsubAction()
     quickAction.destroy()
+    mountedFabSwitchHandle?.destroy()
+    fab.removeEventListener('pointerdown', onFabPointerDown)
+    fab.removeEventListener('pointermove', onFabPointerMove)
+    fab.removeEventListener('pointerup', onFabPointerUp)
     fab.remove()
     for (const handle of mountedRowHandles) handle.destroy()
     removeHideStyle?.()
