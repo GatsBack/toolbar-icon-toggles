@@ -119,12 +119,18 @@ export function setup(ctx: SpindleFrontendContext) {
       background-color: var(--lumiverse-accent-hover, var(--lumiverse-fill-hover, #005999)) !important;
       border-color: var(--lumiverse-border-hover, rgba(255, 255, 255, 0.35));
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+      opacity: 1 !important;
     }
-    .tit-fab-btn:active {
+    .tit-fab-btn:active,
+    .tit-fab-btn:focus,
+    .tit-fab-btn:focus-visible {
       cursor: grabbing;
       background-image: none !important;
       background-color: var(--lumiverse-accent-active, var(--lumiverse-fill-active, #004070)) !important;
+      border-color: var(--lumiverse-border-hover, rgba(255, 255, 255, 0.35)) !important;
       transform: scale(0.94);
+      opacity: 1 !important;
+      outline: none !important;
     }
     .tit-toggle-all-box {
       display: flex;
@@ -368,7 +374,7 @@ export function setup(ctx: SpindleFrontendContext) {
   toggleAllBox.appendChild(toggleAllLabel)
   const toggleAllSlot = ctx.dom.createElement('div')
   toggleAllBox.appendChild(toggleAllSlot)
-  controlsHeader.appendChild(toggleAllSlot)
+  controlsHeader.appendChild(toggleAllBox)
 
   const subControls = ctx.dom.createElement('div')
   subControls.className = 'tit-sub-controls'
