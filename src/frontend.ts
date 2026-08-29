@@ -164,7 +164,8 @@ export function setup(ctx: SpindleFrontendContext) {
       border-radius: var(--lumiverse-radius);
       font-size: 13px;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-      pointer-events: none;
+      cursor: pointer;
+      user-select: none;
     }
     .tit-pick-hover {
       outline: 2px solid var(--lumiverse-accent) !important;
@@ -297,7 +298,6 @@ export function setup(ctx: SpindleFrontendContext) {
       const row = ctx.dom.createElement('div')
       row.className = 'tit-row'
 
-      // Enable HTML5 drag reordering (disabled when filtering via search)
       if (!searchQuery) {
         row.draggable = true
 
@@ -456,9 +456,12 @@ export function setup(ctx: SpindleFrontendContext) {
   function startPicking() {
     if (cancelPicking) return
 
+    // Dismiss drawer so mobile users can tap the underlying UI freely
+    ctx.ui.closeDrawer()
+
     const banner = ctx.dom.inject(
       'body',
-      `<div class="tit-pick-banner" ${OWNED_ATTR}="1">Click the icon you want to toggle \u2014 Esc to cancel</div>`,
+      `<div class="tit-pick-banner" ${OWNED_ATTR}="1">Tap icon to toggle \u2014 Tap here to cancel</div>`,
       'beforeend'
     )
 
@@ -473,6 +476,16 @@ export function setup(ctx: SpindleFrontendContext) {
     }
 
     const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      
+      // Tap banner to cancel picking
+      if (target?.closest('.tit-pick-banner')) {
+        e.preventDefault()
+        e.stopPropagation()
+        finish(null)
+        return
+      }
+
       const el = findPickable(e.target)
       if (!el) return
       e.preventDefault()
@@ -485,9 +498,12 @@ export function setup(ctx: SpindleFrontendContext) {
       if (e.key === 'Escape') finish(null)
     }
 
-    document.addEventListener('mouseover', onOver, true)
-    document.addEventListener('click', onClick, true)
-    document.addEventListener('keydown', onKey, true)
+    // Delay listener attachment slightly to avoid immediate tap trigger on mobile
+    setTimeout(() => {
+      document.addEventListener('mouseover', onOver, true)
+      document.addEventListener('click', onClick, true)
+      document.addEventListener('keydown', onKey, true)
+    }, 150)
 
     function finish(el: HTMLElement | null) {
       hovered?.classList.remove('tit-pick-hover')
@@ -496,7 +512,13 @@ export function setup(ctx: SpindleFrontendContext) {
       document.removeEventListener('keydown', onKey, true)
       ctx.dom.uninject(banner)
       cancelPicking = null
-      if (el) openNamingModal(el)
+
+      if (el) {
+        openNamingModal(el)
+      } else {
+        // Re-open drawer on cancellation
+        tab.activate()
+      }
     }
 
     cancelPicking = () => finish(null)
@@ -544,6 +566,7 @@ export function setup(ctx: SpindleFrontendContext) {
     cancelBtn.addEventListener('click', (e) => {
       e.preventDefault()
       modal.dismiss()
+      tab.activate()
     })
     actions.appendChild(cancelBtn)
 
@@ -559,6 +582,7 @@ export function setup(ctx: SpindleFrontendContext) {
       persist()
       renderList()
       modal.dismiss()
+      tab.activate()
     })
 
     inputEl.addEventListener('keydown', (e) => {
