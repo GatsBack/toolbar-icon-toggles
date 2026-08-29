@@ -39,7 +39,7 @@ export function setup(ctx: SpindleFrontendContext) {
 
   const removeBaseStyle = ctx.dom.addStyle(`
     .tit-desc {
-      color: var(--lumiverse-text-muted);
+      color: var(--lumiverse-text-muted, currentColor);
       font-size: 12.5px;
       line-height: 1.5;
       margin: 0 0 12px;
@@ -57,11 +57,11 @@ export function setup(ctx: SpindleFrontendContext) {
       justify-content: space-between;
       padding: 8px 10px;
       margin-bottom: 12px;
-      border-radius: var(--lumiverse-radius);
-      border: 1px solid var(--lumiverse-border);
-      background: var(--lumiverse-fill-subtle);
+      border-radius: var(--lumiverse-radius, 6px);
+      border: 1px solid var(--lumiverse-border, rgba(128,128,128,0.2));
+      background: var(--lumiverse-fill-subtle, transparent);
       font-size: 12.5px;
-      color: var(--lumiverse-text);
+      color: var(--lumiverse-text, inherit);
     }
     .tit-sub-controls {
       display: flex;
@@ -73,10 +73,10 @@ export function setup(ctx: SpindleFrontendContext) {
     .tit-search-input {
       flex: 1;
       padding: 6px 10px;
-      border-radius: var(--lumiverse-radius);
-      border: 1px solid var(--lumiverse-border);
-      background: var(--lumiverse-fill);
-      color: var(--lumiverse-text);
+      border-radius: var(--lumiverse-radius, 6px);
+      border: 1px solid var(--lumiverse-border, rgba(128,128,128,0.2));
+      background: var(--lumiverse-fill, transparent);
+      color: var(--lumiverse-text, inherit);
       font-size: 12.5px;
     }
     .tit-add-btn {
@@ -84,74 +84,57 @@ export function setup(ctx: SpindleFrontendContext) {
       align-items: center;
       gap: 6px;
       padding: 7px 14px;
-      border-radius: var(--lumiverse-radius);
-      border: 1px solid var(--lumiverse-border);
-      background: var(--lumiverse-fill);
-      color: var(--lumiverse-text);
+      border-radius: var(--lumiverse-radius, 6px);
+      border: 1px solid var(--lumiverse-border, rgba(128,128,128,0.2));
+      background: var(--lumiverse-fill, transparent);
+      color: var(--lumiverse-text, inherit);
       font-size: 13px;
       cursor: pointer;
     }
-    .tit-add-btn:hover { border-color: var(--lumiverse-border-hover); }
+    .tit-add-btn:hover { border-color: var(--lumiverse-border-hover, rgba(128,128,128,0.4)); }
     .tit-fab-btn {
       position: fixed;
       z-index: 99999;
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background-image: none !important;
-      background-color: var(--lumiverse-accent, var(--lumiverse-fill-elevated, #007acc)) !important;
-      color: var(--lumiverse-accent-text, var(--lumiverse-text, #ffffff)) !important;
+      background: var(--lumiverse-accent, var(--accent, var(--primary, #007acc)));
+      color: var(--lumiverse-accent-contrast, var(--accent-contrast, #ffffff));
       border: 1px solid var(--lumiverse-border, rgba(255, 255, 255, 0.2));
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-      font-size: 22px;
-      line-height: 1;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      font-size: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: grab;
       user-select: none;
       touch-action: none;
-      opacity: 1 !important;
-      transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
     }
     .tit-fab-btn:hover {
-      background-image: none !important;
-      background-color: var(--lumiverse-accent-hover, var(--lumiverse-fill-hover, #005999)) !important;
-      border-color: var(--lumiverse-border-hover, rgba(255, 255, 255, 0.35));
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-      opacity: 1 !important;
+      filter: brightness(1.08);
     }
-    .tit-fab-btn:active,
-    .tit-fab-btn:focus,
-    .tit-fab-btn:focus-visible {
-      cursor: grabbing;
-      background-image: none !important;
-      background-color: var(--lumiverse-accent-active, var(--lumiverse-fill-active, #004070)) !important;
-      border-color: var(--lumiverse-border-hover, rgba(255, 255, 255, 0.35)) !important;
-      transform: scale(0.94);
-      opacity: 1 !important;
-      outline: none !important;
-    }
+    .tit-fab-btn:active { cursor: grabbing; transform: scale(0.95); }
     .tit-toggle-all-box {
       display: flex;
       align-items: center;
       gap: 8px;
       font-size: 12.5px;
-      color: var(--lumiverse-text-muted);
+      color: var(--lumiverse-text-muted, inherit);
     }
     .tit-text-btn {
       background: none;
       border: none;
-      color: var(--lumiverse-text-dim);
+      color: var(--lumiverse-text-dim, inherit);
       font-size: 13px;
       cursor: pointer;
       padding: 7px 10px;
     }
-    .tit-text-btn:hover { color: var(--lumiverse-text); }
+    .tit-text-btn:hover { color: var(--lumiverse-text, inherit); }
     .tit-icon-btn {
       background: none;
       border: none;
-      color: var(--lumiverse-text-dim);
+      color: var(--lumiverse-text-dim, inherit);
       font-size: 11px;
       cursor: pointer;
       padding: 3px 5px;
@@ -161,28 +144,28 @@ export function setup(ctx: SpindleFrontendContext) {
       justify-content: center;
     }
     .tit-icon-btn:hover {
-      color: var(--lumiverse-text);
-      background: var(--lumiverse-fill-hover);
+      color: var(--lumiverse-text, inherit);
+      background: var(--lumiverse-fill-hover, rgba(128,128,128,0.1));
     }
     .tit-row {
       display: flex;
       align-items: center;
       gap: 6px;
       padding: 6px 8px;
-      border: 1px solid var(--lumiverse-border);
-      border-radius: var(--lumiverse-radius);
+      border: 1px solid var(--lumiverse-border, rgba(128,128,128,0.2));
+      border-radius: var(--lumiverse-radius, 6px);
       margin-bottom: 6px;
-      background: var(--lumiverse-fill-subtle);
+      background: var(--lumiverse-fill-subtle, transparent);
       transition: background 0.15s ease, border-color 0.15s ease;
     }
     .tit-row[draggable="true"] { cursor: grab; }
     .tit-row.tit-dragging { opacity: 0.4; cursor: grabbing; }
     .tit-row.tit-drag-over {
-      border-color: var(--lumiverse-accent);
-      background: var(--lumiverse-fill-hover);
+      border-color: var(--lumiverse-accent, #007acc);
+      background: var(--lumiverse-fill-hover, rgba(128,128,128,0.1));
     }
     .tit-drag-handle {
-      color: var(--lumiverse-text-dim);
+      color: var(--lumiverse-text-dim, inherit);
       font-size: 12px;
       padding: 0 4px;
       user-select: none;
@@ -194,11 +177,11 @@ export function setup(ctx: SpindleFrontendContext) {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      color: var(--lumiverse-text);
+      color: var(--lumiverse-text, inherit);
       font-size: 13px;
     }
     .tit-empty {
-      color: var(--lumiverse-text-dim);
+      color: var(--lumiverse-text-dim, inherit);
       font-size: 13px;
       padding: 12px 4px;
     }
@@ -208,18 +191,18 @@ export function setup(ctx: SpindleFrontendContext) {
       left: 50%;
       transform: translateX(-50%);
       z-index: 999999;
-      background: var(--lumiverse-fill);
-      border: 1px solid var(--lumiverse-accent);
-      color: var(--lumiverse-text);
+      background: var(--lumiverse-fill, #ffffff);
+      border: 1px solid var(--lumiverse-accent, #007acc);
+      color: var(--lumiverse-text, inherit);
       padding: 10px 16px;
-      border-radius: var(--lumiverse-radius);
+      border-radius: var(--lumiverse-radius, 6px);
       font-size: 13px;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
       cursor: pointer;
       user-select: none;
     }
     .tit-pick-hover {
-      outline: 2px solid var(--lumiverse-accent) !important;
+      outline: 2px solid var(--lumiverse-accent, #007acc) !important;
       outline-offset: 2px !important;
     }
     .tit-modal-actions {
@@ -275,7 +258,6 @@ export function setup(ctx: SpindleFrontendContext) {
     fabInitialLeft = rect.left
     fabInitialTop = rect.top
 
-    // Switch from bottom/right layout to fixed left/top for free dragging
     fab.style.bottom = 'auto'
     fab.style.right = 'auto'
     fab.style.left = `${fabInitialLeft}px`
@@ -309,7 +291,6 @@ export function setup(ctx: SpindleFrontendContext) {
       const rect = fab.getBoundingClientRect()
       localStorage.setItem(FAB_POS_KEY, JSON.stringify({ x: rect.left, y: rect.top }))
     } else {
-      // It was a tap/click, trigger picking
       startPicking()
     }
   }
@@ -705,10 +686,10 @@ export function setup(ctx: SpindleFrontendContext) {
     inputEl.style.cssText = `
       width: 100%;
       padding: 8px 12px;
-      border-radius: var(--lumiverse-radius);
-      border: 1px solid var(--lumiverse-border);
-      background: var(--lumiverse-fill);
-      color: var(--lumiverse-text);
+      border-radius: var(--lumiverse-radius, 6px);
+      border: 1px solid var(--lumiverse-border, rgba(128,128,128,0.2));
+      background: var(--lumiverse-fill, transparent);
+      color: var(--lumiverse-text, inherit);
       font-size: 13px;
       box-sizing: border-box;
       margin-bottom: 12px;
@@ -767,10 +748,10 @@ export function setup(ctx: SpindleFrontendContext) {
     inputEl.style.cssText = `
       width: 100%;
       padding: 8px 12px;
-      border-radius: var(--lumiverse-radius);
-      border: 1px solid var(--lumiverse-border);
-      background: var(--lumiverse-fill);
-      color: var(--lumiverse-text);
+      border-radius: var(--lumiverse-radius, 6px);
+      border: 1px solid var(--lumiverse-border, rgba(128,128,128,0.2));
+      background: var(--lumiverse-fill, transparent);
+      color: var(--lumiverse-text, inherit);
       font-size: 13px;
       box-sizing: border-box;
       margin-bottom: 12px;
