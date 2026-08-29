@@ -11,8 +11,6 @@ interface MountedHandle {
   destroy: () => void
 }
 
-// Marks every element this extension creates, so the picker can ignore
-// clicks on its own UI (banner, tab, modal) while it's picking a target.
 const OWNED_ATTR = 'data-tit-owned'
 
 const TAB_ICON_SVG =
@@ -33,16 +31,19 @@ export function setup(ctx: SpindleFrontendContext) {
   let cancelPicking: (() => void) | null = null
   let mountedRowHandles: MountedHandle[] = []
 
-  // ---------------------------------------------------------------------
-  // Base styles for the settings tab itself (not for hiding host icons —
-  // that stylesheet is built separately in applyHideStyles()).
-  // ---------------------------------------------------------------------
   const removeBaseStyle = ctx.dom.addStyle(`
     .tit-desc {
       color: var(--lumiverse-text-muted);
       font-size: 12.5px;
       line-height: 1.5;
       margin: 0 0 12px;
+    }
+    .tit-controls-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
     }
     .tit-add-btn {
       display: inline-flex;
@@ -55,9 +56,15 @@ export function setup(ctx: SpindleFrontendContext) {
       color: var(--lumiverse-text);
       font-size: 13px;
       cursor: pointer;
-      margin-bottom: 14px;
     }
     .tit-add-btn:hover { border-color: var(--lumiverse-border-hover); }
+    .tit-toggle-all-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      color: var(--lumiverse-text-muted);
+    }
     .tit-text-btn {
       background: none;
       border: none;
@@ -67,10 +74,26 @@ export function setup(ctx: SpindleFrontendContext) {
       padding: 7px 10px;
     }
     .tit-text-btn:hover { color: var(--lumiverse-text); }
+    .tit-icon-btn {
+      background: none;
+      border: none;
+      color: var(--lumiverse-text-dim);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tit-icon-btn:hover {
+      color: var(--lumiverse-text);
+      background: var(--lumiverse-fill-hover);
+    }
     .tit-row {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       padding: 8px 10px;
       border: 1px solid var(--lumiverse-border);
       border-radius: var(--lumiverse-radius);
@@ -118,9 +141,6 @@ export function setup(ctx: SpindleFrontendContext) {
     }
   `)
 
-  // ---------------------------------------------------------------------
-  // Settings tab
-  // ---------------------------------------------------------------------
   const tab = ctx.ui.registerDrawerTab({
     id: 'icon-toggles',
     title: 'Toolbar Icon Toggles',
@@ -139,11 +159,26 @@ export function setup(ctx: SpindleFrontendContext) {
     'Click "Add icon", then click the real icon you want to manage.'
   tab.root.appendChild(desc)
 
+  const controlsHeader = ctx.dom.createElement('div')
+  controlsHeader.className = 'tit-controls-header'
+  tab.root.appendChild(controlsHeader)
+
   const addBtn = ctx.dom.createElement('button') as HTMLButtonElement
   addBtn.type = 'button'
   addBtn.className = 'tit-add-btn'
   addBtn.textContent = '+ Add icon'
-  tab.root.appendChild(addBtn)
+  controlsHeader.appendChild(addBtn)
+
+  const toggleAllBox = ctx.dom.createElement('div')
+  toggleAllBox.className = 'tit-toggle-all-box'
+  
+  const toggleAllLabel = ctx.dom.createElement('span')
+  toggleAllLabel.textContent = 'Toggle all'
+  toggleAllBox.appendChild(toggleAllLabel)
+
+  const toggleAllSlot = ctx.dom.createElement('div')
+  toggleAllBox.appendChild(toggleAllSlot)
+  controlsHeader.appendChild(toggleAllBox)
 
   const list = ctx.dom.createElement('div')
   tab.root.appendChild(list)
@@ -152,6 +187,28 @@ export function setup(ctx: SpindleFrontendContext) {
     for (const handle of mountedRowHandles) handle.destroy()
     mountedRowHandles = []
     list.replaceChildren()
+
+    // Update Toggle All switch state
+    toggleAllSlot.replaceChildren()
+    if (icons.length > 0) {
+      const allVisible = icons.every((i) => !i.hidden)
+      mountedRowHandles.push(
+        ctx.components.mountSwitch(toggleAllSlot, {
+          checked: allVisible,
+          size: 'sm',
+          ariaLabel: 'Toggle visibility of all icons',
+          onChange: (visible: boolean) => {
+            icons.forEach((i) => (i.hidden = !visible))
+            persist()
+            applyHideStyles()
+            renderList()
+          },
+        })
+      )
+      toggleAllBox.style.display = 'flex'
+    } else {
+      toggleAllBox.style.display = 'none'
+    }
 
     if (icons.length === 0) {
       const empty = ctx.dom.createElement('div')
@@ -171,15 +228,21 @@ export function setup(ctx: SpindleFrontendContext) {
       label.title = icon.selector
       row.appendChild(label)
 
+      const editBtn = ctx.dom.createElement('button') as HTMLButtonElement
+      editBtn.type = 'button'
+      editBtn.className = 'tit-icon-btn'
+      editBtn.title = 'Rename icon'
+      editBtn.innerHTML = '✏️'
+      editBtn.addEventListener('click', () => openRenameModal(icon))
+      row.appendChild(editBtn)
+
       const switchSlot = ctx.dom.createElement('div')
       const closeSlot = ctx.dom.createElement('div')
 
-      // 1. MUST append row and slots to the DOM FIRST so Spindle recognizes the extension ownership
       row.appendChild(switchSlot)
       row.appendChild(closeSlot)
       list.appendChild(row)
 
-      // 2. NOW mount components into the slots after they are in the DOM tree
       mountedRowHandles.push(
         ctx.components.mountSwitch(switchSlot, {
           checked: !icon.hidden,
@@ -189,6 +252,7 @@ export function setup(ctx: SpindleFrontendContext) {
             icon.hidden = !visible
             persist()
             applyHideStyles()
+            renderList()
           },
         })
       )
@@ -215,11 +279,6 @@ export function setup(ctx: SpindleFrontendContext) {
     }
   }
 
-  // ---------------------------------------------------------------------
-  // Hiding: one combined stylesheet, rebuilt whenever state changes.
-  // Runs again on every extension load, so hidden icons stay hidden
-  // across page refreshes.
-  // ---------------------------------------------------------------------
   function applyHideStyles() {
     removeHideStyle?.()
     removeHideStyle = null
@@ -233,9 +292,6 @@ export function setup(ctx: SpindleFrontendContext) {
     ctx.sendToBackend({ type: 'save_icons', icons })
   }
 
-  // ---------------------------------------------------------------------
-  // Picking: click any element on the page to register it.
-  // ---------------------------------------------------------------------
   function defaultLabel(el: Element): string {
     const candidate =
       el.getAttribute('aria-label') || el.getAttribute('title') || (el.textContent || '').trim()
@@ -250,9 +306,6 @@ export function setup(ctx: SpindleFrontendContext) {
       if (val) return `${el.tagName.toLowerCase()}[${attr}="${val.replace(/"/g, '\\"')}"]`
     }
 
-    // Structural fallback: a short tag/position path up to the nearest
-    // useful ancestor. Less stable across UI updates than the attribute
-    // matches above, but works when no stable attribute exists.
     const path: string[] = []
     let node: Element | null = el
     for (let depth = 0; depth < 5 && node && node !== document.body; depth++) {
@@ -324,7 +377,7 @@ export function setup(ctx: SpindleFrontendContext) {
     cancelPicking = () => finish(null)
   }
 
-   function openNamingModal(el: HTMLElement) {
+  function openNamingModal(el: HTMLElement) {
     const selector = buildSelector(el)
     const modal = ctx.ui.showModal({ title: 'Name this icon' })
     modal.root.setAttribute(OWNED_ATTR, '1')
@@ -334,10 +387,9 @@ export function setup(ctx: SpindleFrontendContext) {
     hint.textContent = 'Give this icon a label so you can find it in your list later.'
     modal.root.appendChild(hint)
 
-    // Standard input fallback to guarantee clickability and value access
     const inputSlot = ctx.dom.createElement('div')
     modal.root.appendChild(inputSlot)
-    
+
     const inputEl = ctx.dom.createElement('input') as HTMLInputElement
     inputEl.type = 'text'
     inputEl.value = defaultLabel(el)
@@ -366,7 +418,6 @@ export function setup(ctx: SpindleFrontendContext) {
     cancelBtn.textContent = 'Cancel'
     cancelBtn.addEventListener('click', (e) => {
       e.preventDefault()
-      e.stopPropagation()
       modal.dismiss()
     })
     actions.appendChild(cancelBtn)
@@ -375,28 +426,78 @@ export function setup(ctx: SpindleFrontendContext) {
     saveBtn.type = 'button'
     saveBtn.className = 'tit-add-btn'
     saveBtn.style.marginBottom = '0'
-    saveBtn.style.cursor = 'pointer'
-    saveBtn.style.pointerEvents = 'auto'
     saveBtn.textContent = 'Save'
-    
-    // Explicit click listener on the Save button
     saveBtn.addEventListener('click', (e) => {
       e.preventDefault()
-      e.stopPropagation()
-
       const label = inputEl.value.trim() || 'Untitled icon'
       icons = [...icons, { id: crypto.randomUUID(), label, selector, hidden: false }]
-      
       persist()
       renderList()
       modal.dismiss()
     })
 
-    // Also support pressing 'Enter' inside the input field to save
     inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        saveBtn.click()
-      }
+      if (e.key === 'Enter') saveBtn.click()
+    })
+
+    actions.appendChild(saveBtn)
+  }
+
+  function openRenameModal(icon: ManagedIcon) {
+    const modal = ctx.ui.showModal({ title: 'Rename icon' })
+    modal.root.setAttribute(OWNED_ATTR, '1')
+
+    const inputSlot = ctx.dom.createElement('div')
+    modal.root.appendChild(inputSlot)
+
+    const inputEl = ctx.dom.createElement('input') as HTMLInputElement
+    inputEl.type = 'text'
+    inputEl.value = icon.label
+    inputEl.placeholder = 'Icon label'
+    inputEl.style.cssText = `
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: var(--lumiverse-radius);
+      border: 1px solid var(--lumiverse-border);
+      background: var(--lumiverse-fill);
+      color: var(--lumiverse-text);
+      font-size: 13px;
+      box-sizing: border-box;
+      margin-bottom: 12px;
+    `
+    inputSlot.appendChild(inputEl)
+    setTimeout(() => inputEl.focus(), 50)
+
+    const actions = ctx.dom.createElement('div')
+    actions.className = 'tit-modal-actions'
+    modal.root.appendChild(actions)
+
+    const cancelBtn = ctx.dom.createElement('button') as HTMLButtonElement
+    cancelBtn.type = 'button'
+    cancelBtn.className = 'tit-text-btn'
+    cancelBtn.textContent = 'Cancel'
+    cancelBtn.addEventListener('click', (e) => {
+      e.preventDefault()
+      modal.dismiss()
+    })
+    actions.appendChild(cancelBtn)
+
+    const saveBtn = ctx.dom.createElement('button') as HTMLButtonElement
+    saveBtn.type = 'button'
+    saveBtn.className = 'tit-add-btn'
+    saveBtn.style.marginBottom = '0'
+    saveBtn.textContent = 'Save'
+    saveBtn.addEventListener('click', (e) => {
+      e.preventDefault()
+      const newLabel = inputEl.value.trim() || icon.label
+      icon.label = newLabel
+      persist()
+      renderList()
+      modal.dismiss()
+    })
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') saveBtn.click()
     })
 
     actions.appendChild(saveBtn)
@@ -404,9 +505,6 @@ export function setup(ctx: SpindleFrontendContext) {
 
   addBtn.addEventListener('click', () => startPicking())
 
-  // ---------------------------------------------------------------------
-  // Load saved icons from the backend, then apply their hidden state.
-  // ---------------------------------------------------------------------
   const unsubBackend = ctx.onBackendMessage((payload: any) => {
     if (payload?.type === 'loaded') {
       icons = Array.isArray(payload.icons) ? payload.icons : []
@@ -415,12 +513,8 @@ export function setup(ctx: SpindleFrontendContext) {
     }
   })
   ctx.sendToBackend({ type: 'load' })
-  renderList() // show the empty state immediately while we wait on the backend
+  renderList()
 
-  // ---------------------------------------------------------------------
-  // Bonus: a quick-access entry in the input bar's Extras popover that
-  // jumps straight to the settings tab.
-  // ---------------------------------------------------------------------
   const quickAction = ctx.ui.registerInputBarAction({
     id: 'open-icon-toggles',
     label: 'Toolbar Icon Toggles',
