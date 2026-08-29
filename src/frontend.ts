@@ -331,13 +331,18 @@ export function setup(ctx: SpindleFrontendContext) {
     hint.textContent = 'Give this icon a label so you can find it in your list later.'
     modal.root.appendChild(hint)
 
+    let currentLabel = defaultLabel(el)
+
     const inputSlot = ctx.dom.createElement('div')
     modal.root.appendChild(inputSlot)
-    const nameInput = ctx.components.mountTextInput(inputSlot, {
-      value: defaultLabel(el),
+    const inputHandle = ctx.components.mountTextInput(inputSlot, {
+      value: currentLabel,
       placeholder: 'e.g. Home button',
       autoFocus: true,
-    })
+      onChange: (val: string) => {
+        currentLabel = val
+      },
+    } as any)
 
     const actions = ctx.dom.createElement('div')
     actions.className = 'tit-modal-actions'
@@ -347,7 +352,10 @@ export function setup(ctx: SpindleFrontendContext) {
     cancelBtn.type = 'button'
     cancelBtn.className = 'tit-text-btn'
     cancelBtn.textContent = 'Cancel'
-    cancelBtn.addEventListener('click', () => modal.dismiss())
+    cancelBtn.addEventListener('click', () => {
+      inputHandle?.destroy()
+      modal.dismiss()
+    })
     actions.appendChild(cancelBtn)
 
     const saveBtn = ctx.dom.createElement('button') as HTMLButtonElement
@@ -356,10 +364,14 @@ export function setup(ctx: SpindleFrontendContext) {
     saveBtn.style.marginBottom = '0'
     saveBtn.textContent = 'Save'
     saveBtn.addEventListener('click', () => {
-      const label = nameInput.getValue().trim() || 'Untitled icon'
+      // Fallback: If onChange isn't supported by mountTextInput directly, read from the DOM input
+      const domInput = inputSlot.querySelector('input') as HTMLInputElement | null
+      const label = (domInput ? domInput.value : currentLabel).trim() || 'Untitled icon'
+
       icons = [...icons, { id: crypto.randomUUID(), label, selector, hidden: false }]
       persist()
       renderList()
+      inputHandle?.destroy()
       modal.dismiss()
     })
     actions.appendChild(saveBtn)
