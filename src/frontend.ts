@@ -98,10 +98,10 @@ export function setup(ctx: SpindleFrontendContext) {
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background: var(--lumiverse-accent, var(--lumiverse-fill-subtle, #252529));
-      color: var(--lumiverse-accent-text, var(--lumiverse-text, #ffffff));
-      border: 1px solid var(--lumiverse-border, rgba(255, 255, 255, 0.15));
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      background-color: var(--lumiverse-fill-elevated, var(--lumiverse-bg-primary, var(--lumiverse-fill, #1e1e22))) !important;
+      color: var(--lumiverse-text, #ffffff) !important;
+      border: 1px solid var(--lumiverse-border, #333338);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
       font-size: 22px;
       line-height: 1;
       display: flex;
@@ -110,16 +110,17 @@ export function setup(ctx: SpindleFrontendContext) {
       cursor: grab;
       user-select: none;
       touch-action: none;
-      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+      opacity: 1 !important;
+      transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
     }
     .tit-fab-btn:hover {
-      background: var(--lumiverse-accent-hover, var(--lumiverse-fill-hover, #323238));
-      border-color: var(--lumiverse-border-hover, rgba(255, 255, 255, 0.25));
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+      background-color: var(--lumiverse-fill-hover, var(--lumiverse-bg-secondary, #2a2a30)) !important;
+      border-color: var(--lumiverse-border-hover, #44444a);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
     }
     .tit-fab-btn:active {
       cursor: grabbing;
-      background: var(--lumiverse-accent-active, var(--lumiverse-fill, #1a1a1c));
+      background-color: var(--lumiverse-fill-active, #151518) !important;
       transform: scale(0.94);
     }
     .tit-toggle-all-box {
