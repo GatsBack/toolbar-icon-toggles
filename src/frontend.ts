@@ -76,6 +76,29 @@ export function setup(ctx: SpindleFrontendContext) {
       cursor: pointer;
     }
     .tit-add-btn:hover { border-color: var(--lumiverse-border-hover); }
+    .tit-fab-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 99999;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--lumiverse-accent, #007acc);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .tit-fab-btn:active {
+      transform: scale(0.92);
+    }
     .tit-toggle-all-box {
       display: flex;
       align-items: center;
@@ -119,13 +142,8 @@ export function setup(ctx: SpindleFrontendContext) {
       background: var(--lumiverse-fill-subtle);
       transition: background 0.15s ease, border-color 0.15s ease;
     }
-    .tit-row[draggable="true"] {
-      cursor: grab;
-    }
-    .tit-row.tit-dragging {
-      opacity: 0.4;
-      cursor: grabbing;
-    }
+    .tit-row[draggable="true"] { cursor: grab; }
+    .tit-row.tit-dragging { opacity: 0.4; cursor: grabbing; }
     .tit-row.tit-drag-over {
       border-color: var(--lumiverse-accent);
       background: var(--lumiverse-fill-hover);
@@ -179,6 +197,19 @@ export function setup(ctx: SpindleFrontendContext) {
     }
   `)
 
+  // Inject Floating Action Button (FAB)
+  const fab = ctx.dom.createElement('button') as HTMLButtonElement
+  fab.type = 'button'
+  fab.className = 'tit-fab-btn'
+  fab.textContent = '+'
+  fab.title = 'Pick icon to toggle'
+  fab.setAttribute(OWNED_ATTR, '1')
+  fab.addEventListener('click', (e) => {
+    e.preventDefault()
+    startPicking()
+  })
+  document.body.appendChild(fab)
+
   const tab = ctx.ui.registerDrawerTab({
     id: 'icon-toggles',
     title: 'Toolbar Icon Toggles',
@@ -194,7 +225,7 @@ export function setup(ctx: SpindleFrontendContext) {
   desc.className = 'tit-desc'
   desc.textContent =
     'Pick any icon button in the app and toggle whether it\u2019s shown. ' +
-    'Click "Add icon", then click the real icon you want to manage.'
+    'Click "Add icon" or tap the floating "+" button, then select the target icon.'
   tab.root.appendChild(desc)
 
   const controlsHeader = ctx.dom.createElement('div')
@@ -456,12 +487,16 @@ export function setup(ctx: SpindleFrontendContext) {
   function startPicking() {
     if (cancelPicking) return
 
-    // Dismiss drawer so mobile users can tap the underlying UI freely
-    ctx.ui.closeDrawer()
+    // Safely defer closing the drawer so the click event completes
+    setTimeout(() => {
+      ctx.ui.closeDrawer()
+    }, 50)
+
+    fab.style.display = 'none'
 
     const banner = ctx.dom.inject(
       'body',
-      `<div class="tit-pick-banner" ${OWNED_ATTR}="1">Tap icon to toggle \u2014 Tap here to cancel</div>`,
+      `<div class="tit-pick-banner" ${OWNED_ATTR}="1">Tap target icon to toggle \u2014 Tap here to cancel</div>`,
       'beforeend'
     )
 
@@ -478,7 +513,6 @@ export function setup(ctx: SpindleFrontendContext) {
     const onClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null
       
-      // Tap banner to cancel picking
       if (target?.closest('.tit-pick-banner')) {
         e.preventDefault()
         e.stopPropagation()
@@ -498,7 +532,6 @@ export function setup(ctx: SpindleFrontendContext) {
       if (e.key === 'Escape') finish(null)
     }
 
-    // Delay listener attachment slightly to avoid immediate tap trigger on mobile
     setTimeout(() => {
       document.addEventListener('mouseover', onOver, true)
       document.addEventListener('click', onClick, true)
@@ -511,12 +544,12 @@ export function setup(ctx: SpindleFrontendContext) {
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('keydown', onKey, true)
       ctx.dom.uninject(banner)
+      fab.style.display = 'flex'
       cancelPicking = null
 
       if (el) {
         openNamingModal(el)
       } else {
-        // Re-open drawer on cancellation
         tab.activate()
       }
     }
@@ -676,6 +709,7 @@ export function setup(ctx: SpindleFrontendContext) {
     unsubBackend()
     unsubAction()
     quickAction.destroy()
+    fab.remove()
     for (const handle of mountedRowHandles) handle.destroy()
     removeHideStyle?.()
     removeBaseStyle()
