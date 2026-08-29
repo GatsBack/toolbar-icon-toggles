@@ -321,7 +321,7 @@ export function setup(ctx: SpindleFrontendContext) {
     cancelPicking = () => finish(null)
   }
 
-  function openNamingModal(el: HTMLElement) {
+   function openNamingModal(el: HTMLElement) {
     const selector = buildSelector(el)
     const modal = ctx.ui.showModal({ title: 'Name this icon' })
     modal.root.setAttribute(OWNED_ATTR, '1')
@@ -331,18 +331,27 @@ export function setup(ctx: SpindleFrontendContext) {
     hint.textContent = 'Give this icon a label so you can find it in your list later.'
     modal.root.appendChild(hint)
 
-    let currentLabel = defaultLabel(el)
-
+    // Standard input fallback to guarantee clickability and value access
     const inputSlot = ctx.dom.createElement('div')
     modal.root.appendChild(inputSlot)
-    const inputHandle = ctx.components.mountTextInput(inputSlot, {
-      value: currentLabel,
-      placeholder: 'e.g. Home button',
-      autoFocus: true,
-      onChange: (val: string) => {
-        currentLabel = val
-      },
-    } as any)
+    
+    const inputEl = ctx.dom.createElement('input') as HTMLInputElement
+    inputEl.type = 'text'
+    inputEl.value = defaultLabel(el)
+    inputEl.placeholder = 'e.g. Home button'
+    inputEl.style.cssText = `
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: var(--lumiverse-radius);
+      border: 1px solid var(--lumiverse-border);
+      background: var(--lumiverse-fill);
+      color: var(--lumiverse-text);
+      font-size: 13px;
+      box-sizing: border-box;
+      margin-bottom: 12px;
+    `
+    inputSlot.appendChild(inputEl)
+    setTimeout(() => inputEl.focus(), 50)
 
     const actions = ctx.dom.createElement('div')
     actions.className = 'tit-modal-actions'
@@ -352,8 +361,9 @@ export function setup(ctx: SpindleFrontendContext) {
     cancelBtn.type = 'button'
     cancelBtn.className = 'tit-text-btn'
     cancelBtn.textContent = 'Cancel'
-    cancelBtn.addEventListener('click', () => {
-      inputHandle?.destroy()
+    cancelBtn.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
       modal.dismiss()
     })
     actions.appendChild(cancelBtn)
@@ -362,18 +372,30 @@ export function setup(ctx: SpindleFrontendContext) {
     saveBtn.type = 'button'
     saveBtn.className = 'tit-add-btn'
     saveBtn.style.marginBottom = '0'
+    saveBtn.style.cursor = 'pointer'
+    saveBtn.style.pointerEvents = 'auto'
     saveBtn.textContent = 'Save'
-    saveBtn.addEventListener('click', () => {
-      // Fallback: If onChange isn't supported by mountTextInput directly, read from the DOM input
-      const domInput = inputSlot.querySelector('input') as HTMLInputElement | null
-      const label = (domInput ? domInput.value : currentLabel).trim() || 'Untitled icon'
+    
+    // Explicit click listener on the Save button
+    saveBtn.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
 
+      const label = inputEl.value.trim() || 'Untitled icon'
       icons = [...icons, { id: crypto.randomUUID(), label, selector, hidden: false }]
+      
       persist()
       renderList()
-      inputHandle?.destroy()
       modal.dismiss()
     })
+
+    // Also support pressing 'Enter' inside the input field to save
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        saveBtn.click()
+      }
+    })
+
     actions.appendChild(saveBtn)
   }
 
