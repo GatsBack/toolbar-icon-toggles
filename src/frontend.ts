@@ -31,6 +31,7 @@ export function setup(ctx: SpindleFrontendContext) {
   let cancelPicking: (() => void) | null = null
   let mountedRowHandles: MountedHandle[] = []
   let searchQuery = ''
+  let draggedIndex: number | null = null
 
   const removeBaseStyle = ctx.dom.addStyle(`
     .tit-desc {
@@ -116,6 +117,25 @@ export function setup(ctx: SpindleFrontendContext) {
       border-radius: var(--lumiverse-radius);
       margin-bottom: 6px;
       background: var(--lumiverse-fill-subtle);
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .tit-row[draggable="true"] {
+      cursor: grab;
+    }
+    .tit-row.tit-dragging {
+      opacity: 0.4;
+      cursor: grabbing;
+    }
+    .tit-row.tit-drag-over {
+      border-color: var(--lumiverse-accent);
+      background: var(--lumiverse-fill-hover);
+    }
+    .tit-drag-handle {
+      color: var(--lumiverse-text-dim);
+      font-size: 12px;
+      padding: 0 4px;
+      user-select: none;
+      cursor: grab;
     }
     .tit-row-label {
       flex: 1;
@@ -125,10 +145,6 @@ export function setup(ctx: SpindleFrontendContext) {
       white-space: nowrap;
       color: var(--lumiverse-text);
       font-size: 13px;
-    }
-    .tit-reorder-group {
-      display: flex;
-      gap: 2px;
     }
     .tit-empty {
       color: var(--lumiverse-text-dim);
@@ -199,7 +215,6 @@ export function setup(ctx: SpindleFrontendContext) {
   toggleAllBox.appendChild(toggleAllSlot)
   controlsHeader.appendChild(toggleAllBox)
 
-  // Sub-controls: Search & Clear All
   const subControls = ctx.dom.createElement('div')
   subControls.className = 'tit-sub-controls'
 
@@ -237,16 +252,6 @@ export function setup(ctx: SpindleFrontendContext) {
 
   const list = ctx.dom.createElement('div')
   tab.root.appendChild(list)
-
-  function moveIcon(index: number, direction: -1 | 1) {
-    const targetIndex = index + direction
-    if (targetIndex < 0 || targetIndex >= icons.length) return
-    const temp = icons[index]
-    icons[index] = icons[targetIndex]
-    icons[targetIndex] = temp
-    persist()
-    renderList()
-  }
 
   function renderList() {
     for (const handle of mountedRowHandles) handle.destroy()
@@ -292,31 +297,55 @@ export function setup(ctx: SpindleFrontendContext) {
       const row = ctx.dom.createElement('div')
       row.className = 'tit-row'
 
-      // Reorder buttons (⬆️ / ⬇️)
-      const reorderGroup = ctx.dom.createElement('div')
-      reorderGroup.className = 'tit-reorder-group'
+      // Enable HTML5 drag reordering (disabled when filtering via search)
+      if (!searchQuery) {
+        row.draggable = true
 
-      if (realIndex > 0) {
-        const upBtn = ctx.dom.createElement('button') as HTMLButtonElement
-        upBtn.type = 'button'
-        upBtn.className = 'tit-icon-btn'
-        upBtn.textContent = '▲'
-        upBtn.title = 'Move up'
-        upBtn.addEventListener('click', () => moveIcon(realIndex, -1))
-        reorderGroup.appendChild(upBtn)
+        const dragHandle = ctx.dom.createElement('span')
+        dragHandle.className = 'tit-drag-handle'
+        dragHandle.textContent = '⋮⋮'
+        dragHandle.title = 'Drag to reorder'
+        row.appendChild(dragHandle)
+
+        row.addEventListener('dragstart', (e) => {
+          draggedIndex = realIndex
+          row.classList.add('tit-dragging')
+          if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move'
+          }
+        })
+
+        row.addEventListener('dragend', () => {
+          draggedIndex = null
+          row.classList.remove('tit-dragging')
+          document.querySelectorAll('.tit-row').forEach((r) => r.classList.remove('tit-drag-over'))
+        })
+
+        row.addEventListener('dragover', (e) => {
+          e.preventDefault()
+          if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = 'move'
+          }
+          row.classList.add('tit-drag-over')
+        })
+
+        row.addEventListener('dragleave', () => {
+          row.classList.remove('tit-drag-over')
+        })
+
+        row.addEventListener('drop', (e) => {
+          e.preventDefault()
+          row.classList.remove('tit-drag-over')
+          if (draggedIndex === null || draggedIndex === realIndex) return
+
+          const [movedItem] = icons.splice(draggedIndex, 1)
+          icons.splice(realIndex, 0, movedItem)
+          draggedIndex = null
+
+          persist()
+          renderList()
+        })
       }
-
-      if (realIndex < icons.length - 1) {
-        const downBtn = ctx.dom.createElement('button') as HTMLButtonElement
-        downBtn.type = 'button'
-        downBtn.className = 'tit-icon-btn'
-        downBtn.textContent = '▼'
-        downBtn.title = 'Move down'
-        downBtn.addEventListener('click', () => moveIcon(realIndex, 1))
-        reorderGroup.appendChild(downBtn)
-      }
-
-      row.appendChild(reorderGroup)
 
       const label = ctx.dom.createElement('div')
       label.className = 'tit-row-label'
