@@ -178,6 +178,7 @@ export function setup(ctx: SpindleFrontendContext) {
     .tit-add-btn:hover { border-color: var(--lumiverse-border-hover, rgba(128,128,128,0.4)); }
     .tit-fab-btn {
       position: fixed;
+	  
       z-index: 99999;
       width: 44px;
       height: 44px;
@@ -185,6 +186,7 @@ export function setup(ctx: SpindleFrontendContext) {
       background: var(--tit-theme-accent, #a855f7);
       color: #ffffff;
       border: 1px solid rgba(255, 255, 255, 0.25);
+	  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
       font-size: 20px;
       font-weight: bold;
@@ -302,9 +304,18 @@ export function setup(ctx: SpindleFrontendContext) {
   const fab = ctx.dom.createElement('button') as HTMLButtonElement
   fab.type = 'button'
   fab.className = 'tit-fab-btn'
-  fab.textContent = '+'
+  fab.innerHTML = `
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round">
+    <line x1="12" y1="4" x2="12" y2="20" />
+    <line x1="4" y1="12" x2="20" y2="12" />
+  </svg>
+`
   fab.title = 'Drag to move • Tap to pick icon'
   fab.setAttribute(OWNED_ATTR, '1')
+
+.tit-fab-btn svg {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+}
 
   const savedPos = localStorage.getItem(FAB_POS_KEY)
   if (savedPos) {
