@@ -304,21 +304,9 @@ export function setup(ctx: SpindleFrontendContext) {
   const fab = ctx.dom.createElement('button') as HTMLButtonElement
   fab.type = 'button'
   fab.className = 'tit-fab-btn'
-  fab.innerHTML = `
-  <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
-    <!-- Outer circle as a border -->
-    <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.6)" stroke-width="2" />
-    <!-- Plus sign -->
-    <line x1="12" y1="6" x2="12" y2="18" stroke="white" stroke-width="3" stroke-linecap="round" />
-    <line x1="6" y1="12" x2="18" y2="12" stroke="white" stroke-width="3" stroke-linecap="round" />
-  </svg>
-`
+  fab.textContent = '+'
   fab.title = 'Drag to move • Tap to pick icon'
   fab.setAttribute(OWNED_ATTR, '1')
-
-.tit-fab-btn svg {
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
-}
 
   const savedPos = localStorage.getItem(FAB_POS_KEY)
   if (savedPos) {
